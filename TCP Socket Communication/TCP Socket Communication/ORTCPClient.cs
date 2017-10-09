@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
@@ -91,6 +93,12 @@ namespace TCP_Socket_Communication
             packetQueue = new Queue<ORTCPSocketPacket>();
 
             Connect();
+        }
+
+        public void Reconnect()
+        {
+            if(clientState == ORTCPClientState.DISCONNECTED)
+                Connect();
         }
 
         private void Connect()
@@ -200,6 +208,11 @@ namespace TCP_Socket_Communication
                 clientState = ORTCPClientState.DISCONNECTED;
         }
 
+        private void AutoReconnect()
+        {
+            Connect();
+        }
+
         private void ReadData()
         {
             bool endOfStream = false;
@@ -270,10 +283,12 @@ namespace TCP_Socket_Communication
                     streamWriter.Close();
                     client.Close();
 
-                    //reconnect
+                    if (autoConnectOnDisconnect)
+                        AutoReconnect();
                 }
                 else if (eventType == ORTCPEventType.CONNECTIONREFUSED)
                 {
+                    client.Connect(IPAddress.Any, port);
                     //reconnect
                 }
                 else if (eventType == ORTCPEventType.DATARECEIVED)
