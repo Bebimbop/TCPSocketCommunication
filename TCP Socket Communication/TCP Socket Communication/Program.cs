@@ -1,7 +1,8 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Reactive.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -9,34 +10,41 @@ namespace TCP_Socket_Communication
 {
     class Program
     {
-        public static string serverMessage;
-
+        public static IObservable<ORTCPEventParams> _tcpMessageRecieved;
+        
         static void Main(string[] args)
         {
-            string message = null;
-            ORTCPMultiServer server = new ORTCPMultiServer();
-            server.Start();
-            ORTCPMultiServer.Instance.OnTCPMessageReceived += ServerMessage;
-
-            if(ORTCPMultiServer.Instance == null)
-                Console.WriteLine("ORTCP Multi Server is null.");
             
-            while (message != "exit")
-            {
-                ORTCPMultiServer.Instance.Update();
-                
-                message = Console.ReadLine();
+            _tcpMessageRecieved =   
+                Observable
+                    .FromEvent<ORTCPMultiServer.TCPServerMessageRecivedEvent, ORTCPEventParams>
+                    (h => (p) => h(p), 
+                        h => ORTCPMultiServer.Instance.OnTCPMessageRecived += h,
+                        h => ORTCPMultiServer.Instance.OnTCPMessageRecived -= h);
 
-                if (message == "exit")
-                    break;
+            _tcpMessageRecieved.Subscribe(ServerMessage);
+            
+            ORTCPMultiServer server = new ORTCPMultiServer();
+            server.Start(1983);
+            Console.Read();
+        }
 
-                if (message != "" && message != "/cmprestart" && message != "/cmpshutdown")
+        public static void ServerMessage(ORTCPEventParams e)
+        {
+            Console.WriteLine(e.message);
+        }
+    }
+}
+
+/*
+  if (message != "" && message != "esc" && message != "/cmprestart" && 
+                    message != "/cmpshutdown")
                 {
                     Console.WriteLine("Sending Message to all Clients: " + message);
                     ORTCPMultiServer.Instance.SendAllClientsMessage(message);
                     message = null;
                 }
-                
+
                 if (message == "/cmprestart")
                 {
                     ProcessStartInfo proc = new ProcessStartInfo();
@@ -53,12 +61,4 @@ namespace TCP_Socket_Communication
                     proc.Arguments = "/C shutdown /s /f /t 0";
                     Process.Start(proc);
                 }
-            }
-        }
-
-        public static void ServerMessage(ORTCPEventParams e)
-        {
-            Console.WriteLine(e.message);
-        }
-    }
-}
+*/

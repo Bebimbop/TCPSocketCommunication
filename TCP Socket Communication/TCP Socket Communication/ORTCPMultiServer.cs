@@ -1,153 +1,159 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System;
 using System.Net;
-using System.Net.Security;
 using System.Net.Sockets;
-using System.Text;
-using System.Threading.Tasks;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Reactive.Linq;
+using TCP_Socket_Communication;
 
-namespace TCP_Socket_Communication
+public class ORTCPMultiServer : ORTCPAbstractMultiServer 
 {
-    public class ORTCPMultiServer : ORTCPAbstractMultiServer
-    {
-        public delegate void TCPServerMessageRecievedEvent(ORTCPEventParams eventParams);
+	public delegate void TCPServerMessageRecivedEvent(ORTCPEventParams eventParams);
+	public event TCPServerMessageRecivedEvent OnTCPMessageRecived;
+	
+	public bool verbose = true;
+	public int port = 1933;
+	
+	
+	private static ORTCPMultiServer _instance;
+	public static ORTCPMultiServer Instance { get { return _instance; } }
 
-        public event TCPServerMessageRecievedEvent OnTCPMessageReceived;
+	public ORTCPMultiServer()
+	{
+		_instance = this;
+	}
+	
+	public void Start(int port = 0) 
+	{
+		_listenning = false;
+		_newConnections = new Queue<NewConnection>();
+		_clients = new Dictionary<int, ORTCPClient>();
+		
+		if(port != 0)StartListening(port);
+		else StartListening();
 
-        private bool verbose = true;
-        private int port = 1933;
+		Observable
+			.Interval(TimeSpan.FromSeconds(1))
+			.Where(_ => _newConnections.Count > 0)
+			.Subscribe(_ =>
+			{
+				//Debug.Log(Thread.CurrentThread.ManagedThreadId);
+				NewConnection newConnection = _newConnections.Dequeue();
+				ORTCPClient client = ORTCPClient.CreateInstance("ORMultiServerClient", newConnection.tcpClient, this);
 
-        private static ORTCPMultiServer s_instance;
-        public static ORTCPMultiServer Instance => s_instance;
+				int clientID = SaveClient(client);
+				ORTCPEventParams eventParams = new ORTCPEventParams();
+				eventParams.eventType = ORTCPEventType.Connected;
+				eventParams.client = client;
+				eventParams.clientID = clientID;
+				eventParams.socket = newConnection.tcpClient;
+				Console.WriteLine("[TCPServer] New client connected");
+			});
+	}
+	
 
-        public void Start()
-        {
-            s_instance = this;
-            isListening = false;
-            newConnections = new Queue<NewConnection>();
-            clients = new Dictionary<int, ORTCPClient>();
-            Console.WriteLine("ORTCP Multi Server created.");
-            StartListening();
-        }
+	private void OnDestroy() 
+	{
+		DisconnectAllClients();
+		StopListening();
+	}
+	
+	private void OnApplicationQuit() 
+	{	
+		DisconnectAllClients();
+		StopListening();
+	}
+	
+	
+	//Delegation methods. The clients call these 
+	public void OnServerConnect(ORTCPEventParams eventParams) 
+	{
+		//if(verbose)print("[TCPServer] OnServerConnect");
+	}
+	
+	public void OnClientDisconnect(ORTCPEventParams eventParams) 
+	{
+		Console.WriteLine("[TCPServer] OnClientDisconnect");
+		eventParams.clientID = GetClientID(eventParams.client);
+		RemoveClient(eventParams.client);
+	}
+	
+	public void OnDataReceived(ORTCPEventParams eventParams) 
+	{
+		Console.WriteLine("[TCPServer] OnDataReceived: " + eventParams.message);	
+		eventParams.clientID = GetClientID(eventParams.client);
+		if(OnTCPMessageRecived!=null)
+			OnTCPMessageRecived(eventParams);
+	}
+	//---
+	
+	
+	public void StartListening() 
+	{
+		StartListening(port);
+	}
+	
+	
+	public void StartListening(int port) 
+	{
+		Console.WriteLine("[TCPServer] StartListening on port: "+port);
+		if (_listenning)
+			return;
 
-        private void StartListening()
-        {
-            StartListening(port);
-        }
+		this.port = port;
+		_listenning = true;
+		_newConnections.Clear();
+		
+		_tcpListener = new TcpListener(IPAddress.Any, port);
+		_tcpListener.Start();
+		AcceptClient();
+	}
 
-        private void StartListening(int _port)
-        {
-            //if(verbose)
-                //
-            if (isListening)
-                return;
+	public void StopListening() 
+	{
+		_listenning = false;
+		if (_tcpListener == null)
+			return;
+		_tcpListener.Stop();
+		_tcpListener = null;
+	}
+	
+	public void DisconnectAllClients() 
+	{
+		Console.WriteLine("[TCPServer] DisconnectAllClients");
+		foreach (KeyValuePair<int, ORTCPClient> entry in _clients)
+			entry.Value.Disconnect();
+		_clients.Clear();
+	}
 
-            this.port = _port;
-            isListening = true;
-            newConnections.Clear();
+	public void SendAllClientsMessage(string message) 
+	{
+		Console.WriteLine("[TCPServer] SendAllClientsMessage: "+message);
+		foreach (KeyValuePair<int, ORTCPClient> entry in _clients)
+			entry.Value.Send(message);
+	}
+	
+	public void DisconnectClientWithID(int clientID) 
+	{
+		
+		Console.WriteLine("[TCPServer] DisconnectClientWithID: "+clientID);
+		ORTCPClient client = GetClient(clientID);
+		if (client == null)
+			return;
+		client.Disconnect();
+	}
+	
+	public void SendClientWithIDMessage(int clientID, string message) 
+	{
+		Console.WriteLine("[TCPServer] SendClientWithIDMessage: "+clientID+". "+message);
+		ORTCPClient client = GetClient(clientID);
 
-            tcpListener = new TcpListener(IPAddress.Any, port);
-            tcpListener.Start();
-            AcceptClient();
-        }
+		if (client == null)
+			return;
 
-        private void StopListening()
-        {
-            isListening = false;
 
-            if (tcpListener == null)
-                return;
-            tcpListener.Stop();
-            tcpListener = null;
-        }
 
-        public void Update()
-        {
-            Console.WriteLine("Updating server.");
-            while (newConnections.Count > 0)
-            {
-                NewConnection newconnection = newConnections.Dequeue();
-                ORTCPClient client = ORTCPClient.CreateClientInstance("ORMultiServerclient", newconnection.tcpClient, this);
-
-                int clientID = SaveClient(client);
-                ORTCPEventParams eventParams = new ORTCPEventParams();
-                eventParams.eventType = ORTCPEventType.CONNECTED;
-                eventParams.client = client;
-                eventParams.clientID = clientID;
-                eventParams.socket = newconnection.tcpClient;
-                Console.WriteLine("[TCPServer] New client connected.");
-                //client.Start();
-                client.Update();
-            }
-
-            if (clients.Count > 0)
-            {
-                for (int i = 0; i < clients.Count; i++)
-                {
-                    if (clients[i] != null)
-                        clients[i].Update();
-                }
-            }
-        }
-
-        public void DisconnectallClients()
-        {
-            //if(verbose)
-                //
-            foreach (KeyValuePair<int, ORTCPClient> entry in clients)
-            {
-                Console.WriteLine("Disconnecting Client: " + entry.Value);
-                entry.Value.Disconnect();
-            }
-
-            clients.Clear();
-        }
-
-        public void SendAllClientsMessage(string message)
-        {
-            //Client isn't being added apparently.
-            if(clients == null || clients.Count == 0)
-                Console.WriteLine("No clients to message.");
-            foreach (KeyValuePair<int, ORTCPClient> entry in clients)
-            {
-                Console.WriteLine("Client To Deliever To: " + entry.Value);
-                entry.Value.Send(message);
-            }
-        }
-
-        public void DisconnectclientWithID(int clientID)
-        {
-            //if(verbose)
-                //
-            ORTCPClient client = GetClient(clientID);
-            client?.Disconnect();
-        }
-
-        public void SendClientWithIDMessage(int clientID, string message)
-        {
-            //if(verbose)
-                //
-            ORTCPClient client = GetClient(clientID);
-            client?.Send(message);
-        }
-
-        public void OnServerConnect(ORTCPEventParams eventParams)
-        {
-
-        }
-
-        public void OnClientDisconnect(ORTCPEventParams eventParams)
-        {
-            eventParams.clientID = GetClientID(eventParams.client);
-            RemoveClient(eventParams.client);
-        }
-
-        public void OnDataReceived(ORTCPEventParams eventParams)
-        {
-            eventParams.clientID = GetClientID(eventParams.client);
-
-            OnTCPMessageReceived?.Invoke(eventParams);
-        }
-    }
+		client.Send(message);
+	}
+	
 }

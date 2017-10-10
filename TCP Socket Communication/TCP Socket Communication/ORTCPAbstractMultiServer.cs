@@ -1,121 +1,113 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
 using System.Net.Sockets;
-using System.Text;
-using System.Threading.Tasks;
+using System.Collections.Generic;
+using TCP_Socket_Communication;
 
-namespace TCP_Socket_Communication
-{
-    public class ORTCPAbstractMultiServer
-    {
-        protected class NewConnection
-        {
-            public TcpClient tcpClient;
+public class ORTCPAbstractMultiServer  {
+	
+	protected class NewConnection 
+	{	
+		public TcpClient tcpClient;
+		public NewConnection(TcpClient tcpClient) 
+		{
+			this.tcpClient = tcpClient;
+		}
+	}
 
-            public NewConnection(TcpClient client)
-            {
-                tcpClient = client;
-            }
-        }
+	
+	protected int ClientID = 0;
+	protected Dictionary<int, ORTCPClient> _clients;
+	protected TcpListener _tcpListener;
+	protected Queue<NewConnection> _newConnections;
+	protected bool _listenning;
+	
+	public int clientsCount 
+	{
+		get { return _clients.Count; }
+	}
+	
+	public bool listenning 
+	{
+		get { return _listenning; }
+	}
+	
+	
+	protected int SaveClient(ORTCPClient client) 
+	{	
+		int currentClientID = ClientID;
+		_clients.Add(currentClientID, client);
+		ClientID++;
+		return currentClientID;
+	}
+	
+	protected int RemoveClient(int clientID) 
+	{	
+		ORTCPClient client = GetClient(clientID);
+		if (client == null)
+			return clientID;
+		client.Disconnect();
+		_clients.Remove(clientID);
+		return clientID;
+	}
+	
+	protected int RemoveClient(ORTCPClient client) 
+	{		
+		int clientID = GetClientID(client);
+		if (clientID < 0) 
+		{
+			return -1;
+		}
+		return RemoveClient(clientID);
+	}
+	
+	
+	protected TcpClient GetTcpClient(int clientID) 
+	{
+		ORTCPClient client = null;
+		if (!_clients.TryGetValue(clientID, out client))
+			return null;
+		return client.tcpClient;
+	}
+	
+	protected ORTCPClient GetClient(int clientID) 
+	{
+		ORTCPClient client = null;
+		if (_clients.TryGetValue(clientID, out client))
+		    return client;
+		return null;
+	}
+	
+	protected int GetClientID(ORTCPClient client) 
+	{
+		foreach (KeyValuePair<int, ORTCPClient> entry in _clients)
+			if (entry.Value == client)
+				return entry.Key;
+		return -1;
+	}
+	
+	protected int GetClientID(TcpClient tcpClient) 
+	{
+		foreach (KeyValuePair<int, ORTCPClient> entry in _clients)
+			if (entry.Value.tcpClient == tcpClient)
+				return entry.Key;
+		return -1;
+	}
+	
+	protected void AcceptClient() {
+		_tcpListener.BeginAcceptTcpClient(new AsyncCallback(AcceptTcpClientCallback), _tcpListener);
+	}
 
-        protected int clientID;
-        protected Dictionary<int, ORTCPClient> clients;
-        protected TcpListener tcpListener;
-        protected Queue<NewConnection> newConnections;
-        protected bool isListening;
-
-        public int ClientCount()
-        {
-            return clients.Count;
-        }
-
-        public bool Listening()
-        {
-            return isListening;
-        }
-
-        protected int SaveClient(ORTCPClient clientToSave)
-        {
-            int currentClientID = clientID;
-            clients.Add(currentClientID, clientToSave);
-            Console.WriteLine("Client ID Saved: " + clientID);
-            clientID++;
-            return currentClientID;
-        }
-
-        protected int RemoveClient(int clientIdToRemove)
-        {
-            ORTCPClient client = GetClient(clientIdToRemove);
-
-            if (client == null)
-                return clientIdToRemove;
-
-            Console.WriteLine("Disconnecting Client ID: " + clientIdToRemove);
-            client.Disconnect();
-            clients.Remove(clientIdToRemove);
-            return clientIdToRemove;
-        }
-
-        protected int RemoveClient(ORTCPClient clientToRemove)
-        {
-            int clientId = GetClientID(clientToRemove);
-            if (clientID < 0)
-                return -1;
-
-            return RemoveClient(clientId);
-        }
-
-        protected TcpClient GetTcpClient(int clientIdToGet)
-        {
-            ORTCPClient client = null;
-            if (!clients.TryGetValue(clientIdToGet, out client))
-                return null;
-            return client.tcpClient();
-        }
-
-        protected ORTCPClient GetClient(int clientIdToGet)
-        {
-            ORTCPClient client = null;
-            if (clients.TryGetValue(clientIdToGet, out client))
-                return client;
-            return null;
-        }
-
-        protected int GetClientID(ORTCPClient clientToGet)
-        {
-            foreach(KeyValuePair<int, ORTCPClient> entry in clients)
-                if (entry.Value == clientToGet)
-                    return entry.Key;
-            return -1;
-        }
-
-        protected int GetClientID(TcpClient tcpClientToGet)
-        {
-            foreach (KeyValuePair<int, ORTCPClient> entry in clients)
-                if (entry.Value.tcpClient() == tcpClientToGet)
-                    return entry.Key;
-            return -1;
-        }
-
-        protected void AcceptClient()
-        {
-            tcpListener.BeginAcceptTcpClient(new AsyncCallback(AcceptTcpClientCallback), tcpListener);
-        }
-
-        protected void AcceptTcpClientCallback(IAsyncResult asyncResult)
-        {
-            Console.WriteLine("Accepting client.");
-            TcpListener _tcpListener = (TcpListener) asyncResult.AsyncState;
-            TcpClient _tcpClient = tcpListener.EndAcceptTcpClient(asyncResult);
-
-            if (_tcpListener != null && _tcpClient.Connected)
-            {
-                newConnections.Enqueue(new NewConnection(_tcpClient));
-                AcceptClient();
-                Console.WriteLine("Client Accepted.");
-            }
-        }
-    }
+	protected void AcceptTcpClientCallback(IAsyncResult ar) 
+	{	
+	    TcpListener tcpListener = (TcpListener)ar.AsyncState;
+		TcpClient tcpClient = tcpListener.EndAcceptTcpClient(ar);
+		if (tcpListener != null && tcpClient.Connected) 
+		{
+			_newConnections.Enqueue(new NewConnection(tcpClient));
+			AcceptClient();
+		}
+	}
+	
+	
+	
 }

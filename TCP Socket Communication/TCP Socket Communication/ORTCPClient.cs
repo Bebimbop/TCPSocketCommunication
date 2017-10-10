@@ -1,321 +1,260 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
-using System.Linq;
-using System.Net;
 using System.Net.Sockets;
-using System.Runtime.InteropServices;
-using System.Security.Cryptography;
-using System.Text;
+using System.Reactive.Linq;
 using System.Threading;
-using System.Threading.Tasks;
+using TCP_Socket_Communication;
 
-namespace TCP_Socket_Communication
+public enum ORTCPClientState {
+	Connecting,
+	Connected,
+	Disconnected,
+
+}
+
+public enum ORTCPClientStartConnection 
 {
-    public enum ORTCPClientState
-    {
-        CONNECTING,
-        CONNECTED,
-        DISCONNECTED,
-    }
+	DontConnect,
+	Awake,
+	Start
+}
 
-    public enum ORTCPClientStartConnection
-    {
-        DONTCONNECT,
-        AWAKE,
-        START
-    }
+public class ORTCPClient 
+{
+	public delegate void TCPServerMessageRecivedEvent(ORTCPEventParams eventParams);
+	public event TCPServerMessageRecivedEvent OnTCPMessageRecived;
 
-    public class ORTCPClient
-    {
-        public delegate void TCPServerMessageRecievedEvent(ORTCPEventParams eventParams);
+    internal int laneID = 0;
+	public bool verbose = true;
+	//public inAppStatus AppStatus = inAppStatus.Done;
+	private bool autoConnectOnDisconnect			= true;
+	private float disconnectTryInterval				= 3;
+	private bool autoConnectOnConnectionRefused		= true;
+	private float connectionRefusedTryInterval		= 3;
+	private string hostname							= "127.0.0.1";
+	private int port								= 1983;
+	private ORTCPSocketType socketType				= ORTCPSocketType.Text;
+	private int bufferSize							= 1024;
+	
+	
+	public ORTCPClientState _state = ORTCPClientState.Disconnected;
+	private NetworkStream _stream;
+	private StreamWriter _writer;
+	private StreamReader _reader;
+	private Thread _readThread;
+	private TcpClient _client;
+	private Queue<ORTCPEventType> _events = new Queue<ORTCPEventType>();
+	private Queue<string> _messages 	= new Queue<string>();
+	private Queue<ORSocketPacket> _packets = new Queue<ORSocketPacket>();
+	
+	private ORTCPMultiServer serverDelegate; 
+	
+	public bool isConnected {
+		get { return _state == ORTCPClientState.Connected; }
+	}
+	
+	public ORTCPClientState state {
+		get { return _state; }
+	}
+	
+	public TcpClient client {
+		get { return _client; }
+	}
+	
+	public TcpClient tcpClient {
+		get { return _client; }
+	}
+	
+	public static ORTCPClient CreateInstance(string name, TcpClient tcpClient, ORTCPMultiServer serverDelegate) // this is only used by the server
+	{
+		ORTCPClient client = new ORTCPClient();
+		client.SetTcpClient(tcpClient);
+		client.serverDelegate = serverDelegate;
+		client.verbose = false;
+		client.Start();
+		return client;
+	}
 
-        public event TCPServerMessageRecievedEvent OnTCPMessageReceived;
 
-        public bool verbose = true;
+	public void Start () 
+	{	
+		Connect();
+		Observable
+			.Interval(TimeSpan.FromSeconds(1))
+			.Where(x => _events.Count > 0)
+			.Subscribe(x =>
+			{
+				ORTCPEventType eventType = _events.Dequeue();
+			
+				ORTCPEventParams eventParams = new ORTCPEventParams();
+				eventParams.eventType = eventType;
+				eventParams.client = this;
+				eventParams.socket = _client;
+			
+				if (eventType == ORTCPEventType.Connected) 
+				{
+					Console.WriteLine("[TCPClient] Connnected to server");
+					if(serverDelegate!=null)serverDelegate.OnServerConnect(eventParams);
+				} 
+				else if (eventType == ORTCPEventType.Disconnected) 
+				{
+					Console.WriteLine("[TCPClient] Disconnnected from server");
+					if(serverDelegate!=null)serverDelegate.OnClientDisconnect(eventParams);
+				
+					_reader.Close();
+					_writer.Close();
+					_client.Close();
+				
+				} 
+				else if (eventType == ORTCPEventType.DataReceived) 
+				{
+					if (socketType == ORTCPSocketType.Text) 
+					{
+						eventParams.message = _messages.Dequeue();
+						Console.WriteLine("[TCPClient] DataReceived: "+ eventParams.message);
 
-        private bool autoConnectOnDisconnect = true;
-        private float disconnectTryInterval = 3;
-        private bool autoConnectOnConnectionRefused = true;
-        private float connectionRefusedTryInterval = 3;
-        private string hostname = "127.0.0.1";
-        private int port = 1933;
-        private ORTCPSocketType socketType = ORTCPSocketType.TEXT;
-        private int bufferSize = 1024;
+						if (OnTCPMessageRecived != null)
+							OnTCPMessageRecived (eventParams);
+					} 
+					else 
+						eventParams.packet = _packets.Dequeue();
+					if(serverDelegate!=null)serverDelegate.OnDataReceived(eventParams);
+				} 
+				else if (eventType == ORTCPEventType.ConnectionRefused) 
+				{
+					Console.WriteLine("[TCPClient] ConnectionRefused... will try again...");
+				}
+			});
+	}
+	
 
-        private ORTCPClientState clientState;
-        private NetworkStream stream;
-        private StreamWriter streamWriter;
-        private StreamReader streamReader;
-        private System.Threading.Thread readthread;
-        private TcpClient client;
-        private Queue<ORTCPEventType> eventQueue;
-        private Queue<string> messageQueue;
-        private Queue<ORTCPSocketPacket> packetQueue;
-
-        private ORTCPMultiServer serverDelegate;
-
-        public bool IsConnected()
-        {
-            return clientState == ORTCPClientState.CONNECTED;
-        }
-
-        public ORTCPClientState State()
-        {
-            return clientState;
-        }
-
-        public TcpClient Client()
-        {
-            return client;
-        }
-
-        public TcpClient tcpClient()
-        {
-            return client;
-        }
-
-        public static ORTCPClient CreateClientInstance(string name, TcpClient tcpClient,
-            ORTCPMultiServer serverDelegate)
-        {
-            ORTCPClient client = new ORTCPClient();
-            client.Setup();
-            client.SetTcpClient(tcpClient);
-            client.serverDelegate = serverDelegate;
-            client.verbose = false;
-            return client;
-        }
-
-        public void Setup()
-        {
-            clientState = ORTCPClientState.DISCONNECTED;
-            eventQueue = new Queue<ORTCPEventType>();
-            messageQueue = new Queue<string>();
-            packetQueue = new Queue<ORTCPSocketPacket>();
-        }
-
-        public void Start()
-        {
-            clientState = ORTCPClientState.DISCONNECTED;
-            eventQueue = new Queue<ORTCPEventType>();
-            messageQueue = new Queue<string>();
-            packetQueue = new Queue<ORTCPSocketPacket>();
-
-            Connect();
-        }
-
-        public void Reconnect()
-        {
-            if(clientState == ORTCPClientState.DISCONNECTED)
-                Connect();
-        }
-
-        private void Connect()
-        {
-            Connect(hostname, port);
-        }
-
-        private void Connect(string _hostName, int _port)
-        {
-            if (clientState == ORTCPClientState.CONNECTED)
-                return;
-
-            hostname = _hostName;
-            port = _port;
-            clientState = ORTCPClientState.CONNECTING;
-            messageQueue.Clear();
-            eventQueue.Clear();
-            client = new TcpClient();
-            client.BeginConnect(hostname, port, new AsyncCallback(ConnectCallback), client);
-        }
-
-        private void ConnectCallback(IAsyncResult asyncResult)
-        {
-            try
-            {
-                TcpClient tcpClient = (TcpClient) asyncResult.AsyncState;
-                tcpClient.EndConnect(asyncResult);
-                SetTcpClient(tcpClient);
-            }
-            catch (Exception e)
-            {
-                eventQueue.Enqueue(ORTCPEventType.CONNECTIONREFUSED);
-                Console.WriteLine(e);
-                throw;
-            }
-        }
-
-        public void Disconnect()
-        {
-            clientState = ORTCPClientState.DISCONNECTED;
-            try
-            {
-                streamReader?.Close();
-            }
-            catch (Exception e)
-            {
-                e.ToString();
-            }
-
-            try
-            {
-                streamWriter?.Close();
-            }
-            catch (Exception e)
-            {
-                e.ToString();
-            }
-
-            try
-            {
-                client?.Close();
-            }
-            catch (Exception e)
-            {
-                e.ToString();
-            }
-        }
-
-        public void Send(string message)
-        {
-            //if(verbose)
-                //
-            if (!IsConnected())
-                return;
-            streamWriter.WriteLine(message);
-            streamWriter.Flush();
-        }
-
-        public void SendBytes(byte[] bytes)
-        {
-            SendBytes(bytes, 0, bytes.Length);
-        }
-
-        private void SendBytes(byte[] bytes, int offset, int size)
-        {
-            if (!IsConnected())
-                return;
-            stream.Write(bytes, offset, size);
-            stream.Flush();
-        }
-
-        private void SetTcpClient(TcpClient tcpClient)
-        {
-            client = tcpClient;
-            if (client.Connected)
-            {
-                stream = client.GetStream();
-                streamReader = new StreamReader(stream);
-                streamWriter = new StreamWriter(stream);
-                clientState = ORTCPClientState.CONNECTED;
-                eventQueue.Enqueue(ORTCPEventType.CONNECTED);
-                readthread = new Thread(ReadData);
-                readthread.IsBackground = true;
-                readthread.Start();
-            }
-            else
-                clientState = ORTCPClientState.DISCONNECTED;
-        }
-
-        private void AutoReconnect()
-        {
-            Connect();
-        }
-
-        private void ReadData()
-        {
-            bool endOfStream = false;
-
-            while (!endOfStream)
-            {
-                if (socketType == ORTCPSocketType.TEXT)
-                {
-                    string response = null;
-                    try
-                    {
-                        response = streamReader.ReadLine();
-                    }
-                    catch (Exception e)
-                    {
-                        e.ToString();
-                    }
-
-                    if (response != null)
-                    {
-                        response = response.Replace(Environment.NewLine, "");
-                        eventQueue.Enqueue(ORTCPEventType.DATARECEIVED);
-                        messageQueue.Enqueue(response);
-                    }
-                    else
-                        endOfStream = true;
-                }
-                else if (socketType == ORTCPSocketType.BINARY)
-                {
-                    byte[] bytes = new byte[bufferSize];
-                    int bytesRead = stream.Read(bytes, 0, bufferSize);
-
-                    if (bytesRead == 0)
-                        endOfStream = true;
-                    else
-                    {
-                        eventQueue.Enqueue(ORTCPEventType.DATARECEIVED);
-                        packetQueue.Enqueue(new ORTCPSocketPacket(bytes, bytesRead));
-                    }
-                }
-            }
-
-            clientState = ORTCPClientState.DISCONNECTED;
-            client.Close();
-            eventQueue.Enqueue(ORTCPEventType.DISCONNECTED);
-        }
-
-        public void Update()
-        {
-            while (eventQueue.Count > 0)
-            {
-                ORTCPEventType eventType = eventQueue.Dequeue();
-                ORTCPEventParams eventParams = new ORTCPEventParams();
-                eventParams.eventType = eventType;
-                eventParams.client = this;
-                eventParams.socket = client;
-
-                if (eventType == ORTCPEventType.CONNECTED)
-                {
-                    //if(verbose)
-                    serverDelegate?.OnServerConnect(eventParams);
-                }
-                else if (eventType == ORTCPEventType.DISCONNECTED)
-                {
-                    //if(verbose)
-                    serverDelegate?.OnClientDisconnect(eventParams);
-                    streamReader.Close();
-                    streamWriter.Close();
-                    client.Close();
-
-                    if (autoConnectOnDisconnect)
-                        AutoReconnect();
-                }
-                else if (eventType == ORTCPEventType.CONNECTIONREFUSED)
-                {
-                    client.Connect(IPAddress.Any, port);
-                    //reconnect
-                }
-                else if (eventType == ORTCPEventType.DATARECEIVED)
-                {
-                    if (socketType == ORTCPSocketType.TEXT)
-                    {
-                        eventParams.message = messageQueue.Dequeue();
-
-                        //if(verbose)
-
-                        OnTCPMessageReceived?.Invoke(eventParams);
-                    }
-                    else
-                        eventParams.packet = packetQueue.Dequeue();
-
-                    serverDelegate?.OnDataReceived(eventParams);
-                }
-            }
+	
+	
+	private void ConnectCallback(IAsyncResult ar) 
+	{	
+        try {
+	    	TcpClient tcpClient = (TcpClient)ar.AsyncState;
+			tcpClient.EndConnect(ar);
+			SetTcpClient(tcpClient);
+        } catch (Exception e) {
+			_events.Enqueue(ORTCPEventType.ConnectionRefused);
+			Console.WriteLine("Connect Exception: " + e.Message);
         }
     }
+	
+	private void ReadData() 
+	{
+		bool endOfStream = false;
+		while (!endOfStream) 
+		{	
+			if (socketType == ORTCPSocketType.Text) 
+			{	
+				String response = null;
+				try { response = _reader.ReadLine(); } catch (Exception e) { e.ToString(); }
+				
+				if (response != null) 
+				{
+					response = response.Replace(Environment.NewLine, "");
+					_events.Enqueue(ORTCPEventType.DataReceived);
+					_messages.Enqueue(response);
+				} 
+				else 
+					endOfStream = true;
+				
+				
+			} 
+			else if (socketType == ORTCPSocketType.Binary) 
+			{
+				byte[] bytes = new byte[bufferSize];
+				int bytesRead = _stream.Read(bytes, 0, bufferSize);
+				if (bytesRead == 0) 
+					endOfStream = true;
+				else 
+				{
+					_events.Enqueue(ORTCPEventType.DataReceived);
+					_packets.Enqueue(new ORSocketPacket(bytes, bytesRead));
+				}
+			}
+		}
+		
+		_state = ORTCPClientState.Disconnected;
+		_client.Close();
+		_events.Enqueue(ORTCPEventType.Disconnected);
+		
+	}
+		
+	
+	
+	public void Connect() {
+		Connect(hostname, port);
+	}
+	
+	public void Connect(string hostname, int port) 
+	{
+		Console.WriteLine("[TCPClient] trying to connect to "+hostname+" "+port);
+		if (_state == ORTCPClientState.Connected)
+			return;
+		
+		this.hostname = hostname;
+		this.port = port;
+		_state = ORTCPClientState.Connecting;
+		_messages.Clear();
+		_events.Clear();
+		_client = new TcpClient();
+		_client.BeginConnect(hostname,
+		                     port,
+		                     new AsyncCallback(ConnectCallback),
+		                     _client);
+	}
+	
+	public void Disconnect() 
+	{
+		_state = ORTCPClientState.Disconnected;
+		try { if (_reader != null) _reader.Close(); } catch (Exception e) { e.ToString(); }
+		try { if (_writer != null) _writer.Close(); } catch (Exception e) { e.ToString(); }
+		try { if (_client != null) _client.Close(); } catch (Exception e) { e.ToString(); }
+	}
+
+	public void Send(string message) 
+	{	
+		Console.WriteLine("[TCPClient] sending message: "+message);
+		if (!isConnected)
+			return;
+		_writer.WriteLine(message);
+		_writer.Flush();
+	}
+	
+	public void SendBytes(byte[] bytes) 
+	{
+		SendBytes(bytes, 0, bytes.Length);
+	}
+	
+	public void SendBytes(byte[] bytes, int offset, int size) 
+	{	
+		if (!isConnected)
+			return;
+		_stream.Write(bytes, offset, size);
+		_stream.Flush();
+	}
+	
+	private void SetTcpClient(TcpClient tcpClient) 
+	{	
+		_client = tcpClient;
+		if (_client.Connected) 
+		{
+			_stream = _client.GetStream();
+			_reader = new StreamReader(_stream);
+			_writer = new StreamWriter(_stream);
+			_state = ORTCPClientState.Connected;
+			_events.Enqueue(ORTCPEventType.Connected);
+			_readThread = new Thread(ReadData);
+			_readThread.IsBackground = true;
+			_readThread.Start();
+		} 
+		else 
+			_state = ORTCPClientState.Disconnected;
+	}
+
 }

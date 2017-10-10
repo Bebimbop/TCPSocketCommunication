@@ -1,43 +1,39 @@
-﻿using System;
-using System.Net.Sockets;
+﻿using System.Net.Sockets;
+using TCP_Socket_Communication;
 
-namespace TCP_Socket_Communication
-{
-    public enum ORTCPEventType
-    {
-        NONE,
-        CONNECTED,
-        DISCONNECTED,
-        CONNECTIONREFUSED,
-        DATARECEIVED
-    }
+public enum ORTCPEventType {
+    None,
+    Connected,
+    Disconnected,
+    ConnectionRefused,
+    DataReceived
+}
 
-    public enum ORTCPSocketType
-    {
-        BINARY,
-        TEXT
-    }
+public enum ORTCPSocketType {
+    Binary,
+    Text
+}
 
-    public class ORTCPSocketPacket
-    {
-        public byte[] bytes = null;
-        public int bytescount = 0;
+public class ORSocketPacket {
+	
+    public byte[] bytes					= null;
+    public int bytesCount				= 0;
+	
+    public ORSocketPacket(byte[] bytes, int bytesCount) {
+        this.bytes = bytes;
+        this.bytesCount = bytesCount;
+    }
+	
+}
 
-        public ORTCPSocketPacket(byte[] bytes, int bytesCount)
-        {
-            this.bytes = bytes;
-            this.bytescount = bytesCount;
-        }
-    }
-    
-    public class ORTCPEventParams
-    {
-        public ORTCPServer server = null;
-        public ORTCPClient client = null;
-        public int clientID = 0;
-        public TcpClient socket = null;
-        public ORTCPEventType eventType = ORTCPEventType.NONE;
-        public string message = "";
-        public ORTCPSocketPacket packet = null;
-    }
+public class ORTCPEventParams {
+
+    public ORTCPServer server			= null;
+    public ORTCPClient client			= null;
+    public int clientID					= 0;
+    public TcpClient socket				= null;
+    public ORTCPEventType eventType		= ORTCPEventType.None;
+    public string message				= "";
+    public ORSocketPacket packet		= null;
+	
 }

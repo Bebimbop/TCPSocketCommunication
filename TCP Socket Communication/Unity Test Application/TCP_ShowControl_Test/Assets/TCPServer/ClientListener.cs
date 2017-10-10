@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -9,29 +9,21 @@ public class ClientListener : MonoBehaviour
     public Text output;
     public ORTCPClient client;
 
-    // Use this for initialization
-    void Start()
-    {
+	// Use this for initialization
+	void Start ()
+	{
         Debug.Log("Client is active.");
-        client.OnTCPMessageRecieved += OnTCPMessage;
-    }
-
-    //// Update is called once per frame
-    //void Update ()
-    //   {
-
-    //}
+	    client.OnTCPMessageRecieved += OnTCPMessage;
+	}
+	
+	//// Update is called once per frame
+	//void Update ()
+ //   {
+		
+	//}
 
     private void OnTCPMessage(ORTCPEventParams e)
     {
         output.text += e.message + "\n";
-
-        if(e.message.Equals("/appshutdown"))
-            Application.Quit();
-    }
-
-    public void SendToServer()
-    {
-        client.Send("Command received.");
     }
 }
