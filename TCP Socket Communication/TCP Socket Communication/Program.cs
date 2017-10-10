@@ -11,26 +11,28 @@ namespace TCP_Socket_Communication
     class Program
     {
         public static IObservable<ORTCPEventParams> _tcpMessageRecieved;
-        
+        public static ORTCPMultiServer Server;
         static void Main(string[] args)
         {
+            Server = new ORTCPMultiServer();
+            Server.Start(1983);
             
             _tcpMessageRecieved =   
                 Observable
                     .FromEvent<ORTCPMultiServer.TCPServerMessageRecivedEvent, ORTCPEventParams>
                     (h => (p) => h(p), 
-                        h => ORTCPMultiServer.Instance.OnTCPMessageRecived += h,
-                        h => ORTCPMultiServer.Instance.OnTCPMessageRecived -= h);
+                        h => Server.OnTCPMessageRecived += h,
+                        h => Server.OnTCPMessageRecived -= h);
 
             _tcpMessageRecieved.Subscribe(ServerMessage);
             
-            ORTCPMultiServer server = new ORTCPMultiServer();
-            server.Start(1983);
+          
             Console.Read();
         }
 
         public static void ServerMessage(ORTCPEventParams e)
         {
+            Server.SendAllClientsMessage("Fuck you!!!!!");
             Console.WriteLine(e.message);
         }
     }
