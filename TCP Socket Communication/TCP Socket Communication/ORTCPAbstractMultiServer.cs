@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net.Sockets;
 using System.Text;
@@ -39,6 +40,7 @@ namespace TCP_Socket_Communication
         {
             int currentClientID = clientID;
             clients.Add(currentClientID, clientToSave);
+            Console.WriteLine("Client ID Saved: " + clientID);
             clientID++;
             return currentClientID;
         }
@@ -50,6 +52,7 @@ namespace TCP_Socket_Communication
             if (client == null)
                 return clientIdToRemove;
 
+            Console.WriteLine("Disconnecting Client ID: " + clientIdToRemove);
             client.Disconnect();
             clients.Remove(clientIdToRemove);
             return clientIdToRemove;
@@ -103,6 +106,7 @@ namespace TCP_Socket_Communication
 
         protected void AcceptTcpClientCallback(IAsyncResult asyncResult)
         {
+            Console.WriteLine("Accepting client.");
             TcpListener _tcpListener = (TcpListener) asyncResult.AsyncState;
             TcpClient _tcpClient = tcpListener.EndAcceptTcpClient(asyncResult);
 
@@ -110,6 +114,7 @@ namespace TCP_Socket_Communication
             {
                 newConnections.Enqueue(new NewConnection(_tcpClient));
                 AcceptClient();
+                Console.WriteLine("Client Accepted.");
             }
         }
     }

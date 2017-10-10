@@ -8,42 +8,36 @@ namespace TCP_Socket_Communication
 {
     class Program
     {
-        static string receivedMessage = null;
+        public static string serverMessage;
 
         static void Main(string[] args)
         {
             string message = null;
+            ORTCPMultiServer server = new ORTCPMultiServer();
+            server.Start();
+            ORTCPMultiServer.Instance.OnTCPMessageReceived += ServerMessage;
 
-            ORTCPClient client = new ORTCPClient();
-
-            client.Start();
-            client.OnTCPMessageReceived += OnReceiveServerMessage;
+            if(ORTCPMultiServer.Instance == null)
+                Console.WriteLine("ORTCP Multi Server is null.");
 
             while (message != "esc")
             {
+                ORTCPMultiServer.Instance.Update();
+
                 message = Console.ReadLine();
 
-                client.Update();
-
-                //Can send message to reset application
-                //Needs a reconnect to be implemented.
-                if (message != null && message.Equals("reset"))
+                if (message != "" && message != "esc")
                 {
-                    client.Send("{reset}");
-                    //client.Reconnect();
-                }
-
-                if (receivedMessage != null)
-                {
-                    Console.WriteLine(receivedMessage);
-                    receivedMessage = null;
+                    Console.WriteLine("Sending Message to all Clients: " + message);
+                    ORTCPMultiServer.Instance.SendAllClientsMessage(message);
+                    message = null;
                 }
             }
         }
 
-        private static void OnReceiveServerMessage(ORTCPEventParams e)
+        public static void ServerMessage(ORTCPEventParams e)
         {
-            receivedMessage = e.message;
+            Console.WriteLine(e.message);
         }
     }
 }

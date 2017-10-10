@@ -27,6 +27,7 @@ namespace TCP_Socket_Communication
             isListening = false;
             newConnections = new Queue<NewConnection>();
             clients = new Dictionary<int, ORTCPClient>();
+            Console.WriteLine("ORTCP Multi Server created.");
             StartListening();
         }
 
@@ -61,22 +62,55 @@ namespace TCP_Socket_Communication
             tcpListener = null;
         }
 
+        public void Update()
+        {
+            Console.WriteLine("Updating server.");
+            while (newConnections.Count > 0)
+            {
+                NewConnection newconnection = newConnections.Dequeue();
+                ORTCPClient client = ORTCPClient.CreateClientInstance("ORMultiServerclient", newconnection.tcpClient, this);
+
+                int clientID = SaveClient(client);
+                ORTCPEventParams eventParams = new ORTCPEventParams();
+                eventParams.eventType = ORTCPEventType.CONNECTED;
+                eventParams.client = client;
+                eventParams.clientID = clientID;
+                eventParams.socket = newconnection.tcpClient;
+                Console.WriteLine("[TCPServer] New client connected.");
+                //client.Start();
+                client.Update();
+            }
+
+            if (clients.Count > 0)
+            {
+                for(int i = 0; i < clients.Count; i++)
+                    clients[i].Update();
+            }
+        }
+
         public void DisconnectallClients()
         {
             //if(verbose)
                 //
             foreach (KeyValuePair<int, ORTCPClient> entry in clients)
+            {
+                Console.WriteLine("Disconnecting Client: " + entry.Value);
                 entry.Value.Disconnect();
+            }
 
             clients.Clear();
         }
 
         public void SendAllClientsMessage(string message)
         {
-            //if(verbose)
-                //
+            //Client isn't being added apparently.
+            if(clients == null || clients.Count == 0)
+                Console.WriteLine("No clients to message.");
             foreach (KeyValuePair<int, ORTCPClient> entry in clients)
+            {
+                Console.WriteLine("Client To Deliever To: " + entry.Value);
                 entry.Value.Send(message);
+            }
         }
 
         public void DisconnectclientWithID(int clientID)
@@ -97,7 +131,7 @@ namespace TCP_Socket_Communication
 
         public void OnServerConnect(ORTCPEventParams eventParams)
         {
-            
+
         }
 
         public void OnClientDisconnect(ORTCPEventParams eventParams)

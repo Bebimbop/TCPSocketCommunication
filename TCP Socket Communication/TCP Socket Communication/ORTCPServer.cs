@@ -110,10 +110,10 @@ namespace TCP_Socket_Communication
 
             tcpListener = new TcpListener(IPAddress.Any, port);
             tcpListener.Start();
-            //tcpListener.BeginAcceptTcpClient(new AsyncCallback(AcceptTcpClientCallback), listeners);
+            tcpListener.BeginAcceptTcpClient(new AsyncCallback(AcceptTcpClientCallback), tcpListener);
         }
 
-        private void AcceptTcpClientcallback(IAsyncResult asyncResult)
+        private void AcceptTcpClientCallback(IAsyncResult asyncResult)
         {
             TcpListener _tcpListener = (TcpListener) asyncResult.AsyncState;
             tcpClient = _tcpListener.EndAcceptTcpClient(asyncResult);

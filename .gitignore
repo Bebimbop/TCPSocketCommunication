@@ -286,3 +286,5 @@ __pycache__/
 *.btm.cs
 *.odx.cs
 *.xsd.cs
+/TCP Socket Communication/Unity Test Application/TCP_ShowControl_Test/Library
+/TCP Socket Communication/Unity Test Application/TCP_ShowControl_Test/Temp

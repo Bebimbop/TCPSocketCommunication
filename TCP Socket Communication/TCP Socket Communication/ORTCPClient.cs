@@ -79,10 +79,19 @@ namespace TCP_Socket_Communication
             ORTCPMultiServer serverDelegate)
         {
             ORTCPClient client = new ORTCPClient();
+            client.Setup();
             client.SetTcpClient(tcpClient);
             client.serverDelegate = serverDelegate;
             client.verbose = false;
             return client;
+        }
+
+        public void Setup()
+        {
+            clientState = ORTCPClientState.DISCONNECTED;
+            eventQueue = new Queue<ORTCPEventType>();
+            messageQueue = new Queue<string>();
+            packetQueue = new Queue<ORTCPSocketPacket>();
         }
 
         public void Start()
