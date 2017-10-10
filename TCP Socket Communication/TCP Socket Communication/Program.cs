@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -20,11 +20,11 @@ namespace TCP_Socket_Communication
 
             if(ORTCPMultiServer.Instance == null)
                 Console.WriteLine("ORTCP Multi Server is null.");
-
+            
             while (message != "exit")
             {
                 ORTCPMultiServer.Instance.Update();
-
+                
                 message = Console.ReadLine();
 
                 if (message == "exit")
@@ -36,7 +36,7 @@ namespace TCP_Socket_Communication
                     ORTCPMultiServer.Instance.SendAllClientsMessage(message);
                     message = null;
                 }
-
+                
                 if (message == "/cmprestart")
                 {
                     ProcessStartInfo proc = new ProcessStartInfo();

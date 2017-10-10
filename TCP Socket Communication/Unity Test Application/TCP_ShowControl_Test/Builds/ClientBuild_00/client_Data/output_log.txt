@@ -15,14 +15,14 @@ Platform assembly: C:\Users\Kyle\Desktop\TCPSocketCommunication\TCP Socket Commu
 Loading C:\Users\Kyle\Desktop\TCPSocketCommunication\TCP Socket Communication\Unity Test Application\TCP_ShowControl_Test\Builds\ClientBuild_00\client_Data\Managed\UnityEngine.UI.dll into Unity Child Domain
 Platform assembly: C:\Users\Kyle\Desktop\TCPSocketCommunication\TCP Socket Communication\Unity Test Application\TCP_ShowControl_Test\Builds\ClientBuild_00\client_Data\Managed\UnityEngine.Networking.dll (this message is harmless)
 Loading C:\Users\Kyle\Desktop\TCPSocketCommunication\TCP Socket Communication\Unity Test Application\TCP_ShowControl_Test\Builds\ClientBuild_00\client_Data\Managed\UnityEngine.Networking.dll into Unity Child Domain
-- Completed reload, in  0.016 seconds
+- Completed reload, in  0.017 seconds
 Platform assembly: C:\Users\Kyle\Desktop\TCPSocketCommunication\TCP Socket Communication\Unity Test Application\TCP_ShowControl_Test\Builds\ClientBuild_00\client_Data\Managed\System.Core.dll (this message is harmless)
 Platform assembly: C:\Users\Kyle\Desktop\TCPSocketCommunication\TCP Socket Communication\Unity Test Application\TCP_ShowControl_Test\Builds\ClientBuild_00\client_Data\Managed\System.dll (this message is harmless)
 desktop: 2560x1440 59Hz; virtual: 5440x2560 at -1440,-543
 <RI> Initializing input.
 <RI> Input initialized.
 <RI> Initialized touch support.
-UnloadTime: 0.664626 ms
+UnloadTime: 0.765424 ms
 Client is active.
  
 (Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
@@ -36,25 +36,13 @@ Client is active.
 (Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
 
 Setting up 6 worker threads for Enlighten.
-  Thread -> id: 3944 -> priority: 1 
-  Thread -> id: 3534 -> priority: 1 
-  Thread -> id: 3a00 -> priority: 1 
-  Thread -> id: 1ef4 -> priority: 1 
-  Thread -> id: 237c -> priority: 1 
-  Thread -> id: a54 -> priority: 1 
-[TCPClient] DataRecieved: test
- 
-(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
-
-[TCPClient] DataRecieved: test
- 
-(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
-
-[TCPClient] sending message. Command received.
- 
-(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
-
-[TCPClient] Disconnected from server.
+  Thread -> id: 31c0 -> priority: 1 
+  Thread -> id: c34 -> priority: 1 
+  Thread -> id: 21ec -> priority: 1 
+  Thread -> id: 318 -> priority: 1 
+  Thread -> id: 3140 -> priority: 1 
+  Thread -> id: 588 -> priority: 1 
+[TCPClient] DataRecieved: /appshutdown
  
 (Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
 

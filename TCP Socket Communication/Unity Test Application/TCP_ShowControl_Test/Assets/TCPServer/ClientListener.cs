@@ -12,8 +12,8 @@ public class ClientListener : MonoBehaviour
     // Use this for initialization
     void Start()
     {
-      Debug.Log("Client is active.");
-      client.OnTCPMessageRecieved += OnTCPMessage;
+        Debug.Log("Client is active.");
+        client.OnTCPMessageRecieved += OnTCPMessage;
     }
 
     //// Update is called once per frame
@@ -24,11 +24,14 @@ public class ClientListener : MonoBehaviour
 
     private void OnTCPMessage(ORTCPEventParams e)
     {
-      output.text += e.message + "\n";
+        output.text += e.message + "\n";
+
+        if(e.message.Equals("/appshutdown"))
+            Application.Quit();
     }
 
     public void SendToServer()
     {
-      client.Send("Command received.");
+        client.Send("Command received.");
     }
 }

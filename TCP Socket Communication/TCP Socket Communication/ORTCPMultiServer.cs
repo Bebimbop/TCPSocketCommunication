@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -83,8 +83,11 @@ namespace TCP_Socket_Communication
 
             if (clients.Count > 0)
             {
-                for(int i = 0; i < clients.Count; i++)
-                    clients[i].Update();
+                for (int i = 0; i < clients.Count; i++)
+                {
+                    if (clients[i] != null)
+                        clients[i].Update();
+                }
             }
         }
 
