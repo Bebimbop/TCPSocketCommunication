@@ -21,14 +21,16 @@ namespace TCP_Socket_Communication
             if(ORTCPMultiServer.Instance == null)
                 Console.WriteLine("ORTCP Multi Server is null.");
 
-            while (message != "esc")
+            while (message != "exit")
             {
                 ORTCPMultiServer.Instance.Update();
 
                 message = Console.ReadLine();
 
-                if (message != "" && message != "esc" && message != "/cmprestart" && 
-                    message != "/cmpshutdown")
+                if (message == "exit")
+                    break;
+
+                if (message != "" && message != "/cmprestart" && message != "/cmpshutdown")
                 {
                     Console.WriteLine("Sending Message to all Clients: " + message);
                     ORTCPMultiServer.Instance.SendAllClientsMessage(message);
