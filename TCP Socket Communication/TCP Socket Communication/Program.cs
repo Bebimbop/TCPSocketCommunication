@@ -21,8 +21,7 @@ namespace TCP_Socket_Communication
         
         static void Main(string[] args)
         {
-            
-            TargetApp = Process.Start("ShowControlTest.exe");
+            TargetApp = Process.Start(@"..\" + "NFLX_SuitUp.exe");
             Port = GetPort();
             
             Server = new ORTCPMultiServer();
@@ -126,11 +125,9 @@ namespace TCP_Socket_Communication
                 {
                     Console.BackgroundColor = ConsoleColor.Blue;
                     Console.ForegroundColor = ConsoleColor.White;
-                    var str3 = "[TCPServer] Sending Message to all Clients: ResetApp";
-                    Console.WriteLine(str3);
-                    ORTCPMultiServer.Instance.SendAllClientsMessage(str3);
-                    APP.Send("Resetting the app..");
-                    APP.Send("Reset-App");                   
+                    var str3 = "reset-application";
+                    Console.WriteLine("[TCPServer] Sending Message to all Clients: ResetApp");
+                    ORTCPMultiServer.Instance.SendAllClientsMessage(str3);               
                 }
                     break;
 
