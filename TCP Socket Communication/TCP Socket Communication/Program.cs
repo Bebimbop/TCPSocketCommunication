@@ -14,6 +14,7 @@ namespace TCP_Socket_Communication
         public static ORTCPMultiServer Server;
         static void Main(string[] args)
         {
+            
             Server = new ORTCPMultiServer();
             Server.Start(1983);
             
@@ -25,15 +26,13 @@ namespace TCP_Socket_Communication
                         h => Server.OnTCPMessageRecived -= h);
 
             _tcpMessageRecieved.Subscribe(ServerMessage);
-            
-          
             Console.Read();
         }
 
         public static void ServerMessage(ORTCPEventParams e)
         {
             Server.SendAllClientsMessage("Fuck you!!!!!");
-            Console.WriteLine(e.message);
+            //Console.WriteLine(e.message);
         }
     }
 }

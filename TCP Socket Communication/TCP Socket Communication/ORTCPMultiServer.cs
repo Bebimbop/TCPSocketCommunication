@@ -47,6 +47,8 @@ public class ORTCPMultiServer : ORTCPAbstractMultiServer
 				eventParams.client = client;
 				eventParams.clientID = clientID;
 				eventParams.socket = newConnection.tcpClient;
+				Console.BackgroundColor = ConsoleColor.Cyan;
+				Console.ForegroundColor = ConsoleColor.Black;
 				Console.WriteLine("[TCPServer] New client connected");
 			});
 	}
@@ -80,6 +82,10 @@ public class ORTCPMultiServer : ORTCPAbstractMultiServer
 	
 	public void OnDataReceived(ORTCPEventParams eventParams) 
 	{
+		Console.BackgroundColor = ConsoleColor.DarkYellow;
+		Console.ForegroundColor = ConsoleColor.Black;
+		//Console.Clear();
+		
 		Console.WriteLine("[TCPServer] OnDataReceived: " + eventParams.message);	
 		eventParams.clientID = GetClientID(eventParams.client);
 		if(OnTCPMessageRecived!=null)
@@ -96,6 +102,7 @@ public class ORTCPMultiServer : ORTCPAbstractMultiServer
 	
 	public void StartListening(int port) 
 	{
+		Console.ForegroundColor = ConsoleColor.Green;
 		Console.WriteLine("[TCPServer] StartListening on port: "+port);
 		if (_listenning)
 			return;
@@ -128,6 +135,10 @@ public class ORTCPMultiServer : ORTCPAbstractMultiServer
 
 	public void SendAllClientsMessage(string message) 
 	{
+		Console.BackgroundColor = ConsoleColor.Blue;
+		Console.ForegroundColor = ConsoleColor.White;
+		//Console.Clear();
+		
 		Console.WriteLine("[TCPServer] SendAllClientsMessage: "+message);
 		foreach (KeyValuePair<int, ORTCPClient> entry in _clients)
 			entry.Value.Send(message);

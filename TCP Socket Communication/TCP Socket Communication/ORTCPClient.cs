@@ -95,12 +95,12 @@ public class ORTCPClient
 			
 				if (eventType == ORTCPEventType.Connected) 
 				{
-					Console.WriteLine("[TCPClient] Connnected to server");
+					//Console.WriteLine("[TCPClient] Connnected to server");
 					if(serverDelegate!=null)serverDelegate.OnServerConnect(eventParams);
 				} 
 				else if (eventType == ORTCPEventType.Disconnected) 
 				{
-					Console.WriteLine("[TCPClient] Disconnnected from server");
+					//Console.WriteLine("[TCPClient] Disconnnected from server");
 					if(serverDelegate!=null)serverDelegate.OnClientDisconnect(eventParams);
 				
 					_reader.Close();
@@ -113,7 +113,7 @@ public class ORTCPClient
 					if (socketType == ORTCPSocketType.Text) 
 					{
 						eventParams.message = _messages.Dequeue();
-						Console.WriteLine("[TCPClient] DataReceived: "+ eventParams.message);
+					//	Console.WriteLine("[TCPClient] DataReceived: "+ eventParams.message);
 
 						if (OnTCPMessageRecived != null)
 							OnTCPMessageRecived (eventParams);
@@ -124,7 +124,7 @@ public class ORTCPClient
 				} 
 				else if (eventType == ORTCPEventType.ConnectionRefused) 
 				{
-					Console.WriteLine("[TCPClient] ConnectionRefused... will try again...");
+					//Console.WriteLine("[TCPClient] ConnectionRefused... will try again...");
 				}
 			});
 	}
@@ -140,7 +140,7 @@ public class ORTCPClient
 			SetTcpClient(tcpClient);
         } catch (Exception e) {
 			_events.Enqueue(ORTCPEventType.ConnectionRefused);
-			Console.WriteLine("Connect Exception: " + e.Message);
+			//Console.WriteLine("Connect Exception: " + e.Message);
         }
     }
 	
@@ -193,7 +193,7 @@ public class ORTCPClient
 	
 	public void Connect(string hostname, int port) 
 	{
-		Console.WriteLine("[TCPClient] trying to connect to "+hostname+" "+port);
+		//Console.WriteLine("[TCPClient] trying to connect to "+hostname+" "+port);
 		if (_state == ORTCPClientState.Connected)
 			return;
 		
@@ -219,7 +219,7 @@ public class ORTCPClient
 
 	public void Send(string message) 
 	{	
-		Console.WriteLine("[TCPClient] sending message: "+message);
+		//Console.WriteLine("[TCPClient] sending message: "+message);
 		if (!isConnected)
 			return;
 		_writer.WriteLine(message);
