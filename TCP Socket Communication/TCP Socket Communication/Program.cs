@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -78,7 +78,27 @@ namespace TCP_Socket_Communication
                             ProcessStartInfo proc = new ProcessStartInfo();
                             proc.WindowStyle = ProcessWindowStyle.Hidden;
                             proc.FileName = "cmd";
-                            proc.Arguments = "/C shutdown /r /f /t 0";
+                            proc.Arguments = "/C shutdown /s /t 0";
+                            Process.Start(proc);
+                        });
+                }
+                    break;
+
+                case "restart-machine":
+                {
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    var str3 = "[TCPServer] Sending Message to all Clients: Restarting in 3s";
+                    Console.WriteLine(str3);
+                    ORTCPMultiServer.Instance.SendAllClientsMessage(str3);
+                    APP.Send("Shutting down in 3s...");
+                    Observable.Timer(TimeSpan.FromSeconds(3))
+                        .Take(1)
+                        .Subscribe(_ =>
+                        {
+                            ProcessStartInfo proc = new ProcessStartInfo();
+                            proc.WindowStyle = ProcessWindowStyle.Hidden;
+                            proc.FileName = "cmd";
+                            proc.Arguments = "/C shutdown /f /r /t 0";
                             Process.Start(proc);
                         });
                 }
@@ -113,6 +133,17 @@ namespace TCP_Socket_Communication
                     APP.Send("Reset-App");                   
                 }
                     break;
+
+                case "shutdown-application":
+                {
+                    Console.BackgroundColor = ConsoleColor.Blue;
+                    Console.ForegroundColor = ConsoleColor.White;
+                    APP.Send("Shutting down the app...");
+                    Observable.Timer(TimeSpan.FromSeconds(2))
+                        .Take(1)
+                        .Subscribe(_ => TargetApp.CloseMainWindow());
+                }
+                    break;
             }
         }
         
@@ -130,4 +161,3 @@ namespace TCP_Socket_Communication
 }
 
 
- 
