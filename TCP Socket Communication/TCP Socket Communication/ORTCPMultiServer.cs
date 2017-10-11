@@ -12,7 +12,7 @@ public class ORTCPMultiServer : ORTCPAbstractMultiServer
 	public event TCPServerMessageRecivedEvent OnTCPMessageRecived;
 	
 	public bool verbose = true;
-	public int port = 1933;
+	public int port = 0;
 	
 	
 	private static ORTCPMultiServer _instance;
@@ -39,7 +39,7 @@ public class ORTCPMultiServer : ORTCPAbstractMultiServer
 			{
 				//Debug.Log(Thread.CurrentThread.ManagedThreadId);
 				NewConnection newConnection = _newConnections.Dequeue();
-				ORTCPClient client = ORTCPClient.CreateInstance("ORMultiServerClient", newConnection.tcpClient, this);
+				ORTCPClient client = ORTCPClient.CreateInstance("ORMultiServerClient", newConnection.tcpClient, this, port);
 
 				int clientID = SaveClient(client);
 				ORTCPEventParams eventParams = new ORTCPEventParams();
@@ -75,6 +75,8 @@ public class ORTCPMultiServer : ORTCPAbstractMultiServer
 	
 	public void OnClientDisconnect(ORTCPEventParams eventParams) 
 	{
+		Console.BackgroundColor = ConsoleColor.Red;
+		Console.ForegroundColor = ConsoleColor.White;
 		Console.WriteLine("[TCPServer] OnClientDisconnect");
 		eventParams.clientID = GetClientID(eventParams.client);
 		RemoveClient(eventParams.client);
@@ -127,6 +129,7 @@ public class ORTCPMultiServer : ORTCPAbstractMultiServer
 	
 	public void DisconnectAllClients() 
 	{
+		Console.ForegroundColor = ConsoleColor.Green;
 		Console.WriteLine("[TCPServer] DisconnectAllClients");
 		foreach (KeyValuePair<int, ORTCPClient> entry in _clients)
 			entry.Value.Disconnect();
@@ -139,7 +142,7 @@ public class ORTCPMultiServer : ORTCPAbstractMultiServer
 		Console.ForegroundColor = ConsoleColor.White;
 		//Console.Clear();
 		
-		Console.WriteLine("[TCPServer] SendAllClientsMessage: "+message);
+		//Console.WriteLine("[TCPServer] SendAllClientsMessage: "+message);
 		foreach (KeyValuePair<int, ORTCPClient> entry in _clients)
 			entry.Value.Send(message);
 	}

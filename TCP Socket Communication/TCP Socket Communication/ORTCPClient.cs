@@ -67,9 +67,10 @@ public class ORTCPClient
 		get { return _client; }
 	}
 	
-	public static ORTCPClient CreateInstance(string name, TcpClient tcpClient, ORTCPMultiServer serverDelegate) // this is only used by the server
+	public static ORTCPClient CreateInstance(string name, TcpClient tcpClient, ORTCPMultiServer serverDelegate, int port) // this is only used by the server
 	{
 		ORTCPClient client = new ORTCPClient();
+		client.port = port;
 		client.SetTcpClient(tcpClient);
 		client.serverDelegate = serverDelegate;
 		client.verbose = false;

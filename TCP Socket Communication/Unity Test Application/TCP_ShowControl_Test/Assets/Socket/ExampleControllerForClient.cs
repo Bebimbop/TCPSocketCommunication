@@ -10,9 +10,10 @@ using UnityEngine.UI;
 
 public class ExampleControllerForClient : MonoBehaviour {
 
-	public Text output;
+	public Text Output;
+	public Text Servermsg;
 	public Image StatusGraphic;
-	public ORTCPClient client;
+	public ORTCPClient Client;
 
 	private List<string> myComandList = new List<string>();
 	public int Port;
@@ -26,8 +27,8 @@ public class ExampleControllerForClient : MonoBehaviour {
 		path = Path.GetFullPath(Path.Combine(Application.dataPath, @"..\"));
 #endif
 		Port = GetPort(path);
-		client.port = Port;
-		if (Port == 0) output.text = "Err : Check Port number";
+		Client.port = Port;
+		if (Port == 0) Output.text = "Err : Check Port number";
 	}
 
 	void Start ()
@@ -35,8 +36,8 @@ public class ExampleControllerForClient : MonoBehaviour {
 		Observable
 			.FromEvent<ORTCPClient.TCPServerMessageRecivedEvent,ORTCPEventParams>
 			(h=>(par)=>h(par),
-		     h=> client.OnTCPMessageRecived += h, 
-			 h => client.OnTCPMessageRecived -= h)
+		     h=> Client.OnTCPMessageRecived += h, 
+			 h => Client.OnTCPMessageRecived -= h)
 			.Subscribe(x =>
 			{
 				OnTCPMessage(x)
@@ -46,7 +47,7 @@ public class ExampleControllerForClient : MonoBehaviour {
 		
 		Observable.EveryUpdate().Subscribe(_ =>
 		{
-			switch (client._state)
+			switch (Client._state)
 			{
 				case ORTCPClientState.Connected:
 					StatusGraphic.color = Color.green;
@@ -63,7 +64,9 @@ public class ExampleControllerForClient : MonoBehaviour {
 	{
 		var msg = e.message;
 		myComandList.Add(msg);
-		output.text = msg +"  ["+DateTime.Now +"] "+"\n" + output.text;
+		Debug.Log(msg);
+		if(msg.Contains("[TCPServer]")) Servermsg.text = msg +"  ["+DateTime.Now +"] "+"\n" + Servermsg.text;
+			else Output.text = msg +"  ["+DateTime.Now +"] "+"\n" + Output.text;
 		return myComandList.ToObservable();
 	}
 
@@ -81,7 +84,7 @@ public class ExampleControllerForClient : MonoBehaviour {
 	{
 		switch (msg)
 		{
-		   case  "Reset":
+		   case  "Reset-App":
 			   SceneManager.LoadScene(SceneManager.GetActiveScene().name);
 			   break;
 		}
@@ -89,3 +92,5 @@ public class ExampleControllerForClient : MonoBehaviour {
 
 
 }
+
+

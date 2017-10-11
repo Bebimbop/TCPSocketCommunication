@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Reactive.Linq;
 using System.Text;
@@ -10,13 +11,22 @@ namespace TCP_Socket_Communication
 {
     class Program
     {
-        public static IObservable<ORTCPEventParams> _tcpMessageRecieved;
-        public static ORTCPMultiServer Server;
+        private static IObservable<ORTCPEventParams> _tcpMessageRecieved;
+        private static ORTCPMultiServer Server;
+        private static ORTCPClient APP, SC;
+        private static List<ORTCPEventParams>myComandList = new List<ORTCPEventParams>();
+
+        private static Process TargetApp;
+        private static int Port;
+        
         static void Main(string[] args)
         {
             
+            TargetApp = Process.Start("ShowControlTest.exe");
+            Port = GetPort();
+            
             Server = new ORTCPMultiServer();
-            Server.Start(1983);
+            Server.Start(Port);
             
             _tcpMessageRecieved =   
                 Observable
@@ -25,41 +35,99 @@ namespace TCP_Socket_Communication
                         h => Server.OnTCPMessageRecived += h,
                         h => Server.OnTCPMessageRecived -= h);
 
-            _tcpMessageRecieved.Subscribe(ServerMessage);
+            _tcpMessageRecieved.Subscribe(DoCommnad);
             Console.Read();
         }
 
-        public static void ServerMessage(ORTCPEventParams e)
+        static void DoCommnad(ORTCPEventParams e)
         {
-            Server.SendAllClientsMessage("Fuck you!!!!!");
-            //Console.WriteLine(e.message);
+            var cmd = e.message;
+            switch (cmd)
+            {
+                case "100":
+                    Console.BackgroundColor = ConsoleColor.Blue;
+                    Console.ForegroundColor = ConsoleColor.White;
+                    APP = e.client;
+                    var str = "[TCPServer] Sending Message to all Clients: TargetApp Connected";
+                    Console.WriteLine(str);
+                    ORTCPMultiServer.Instance.SendAllClientsMessage(str);
+                    APP.Send("Ready to receive cmds");
+                    break;
+                
+                case "200":
+                    Console.BackgroundColor = ConsoleColor.DarkGray;
+                    Console.ForegroundColor = ConsoleColor.White;
+                    SC = e.client;
+                    var str1 = "[TCPServer] Sending Message to all Clients: ShowControl Connected";
+                    Console.WriteLine(str1);
+                    ORTCPMultiServer.Instance.SendAllClientsMessage(str1);
+                    APP.Send("Show Control Connected");
+                    break;
+                    
+                case "shutdown-machine":
+                {
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    var str2 = "[TCPServer] Sending Message to all Clients: Shutting down in 3s";
+                    Console.WriteLine(str2);
+                    ORTCPMultiServer.Instance.SendAllClientsMessage(str2);
+                    APP.Send("Shutting down in 3s..");
+                    Observable.Timer(TimeSpan.FromSeconds(3))
+                        .Take(1)
+                        .Subscribe(_ =>
+                        {
+                            ProcessStartInfo proc = new ProcessStartInfo();
+                            proc.WindowStyle = ProcessWindowStyle.Hidden;
+                            proc.FileName = "cmd";
+                            proc.Arguments = "/C shutdown /r /f /t 0";
+                            Process.Start(proc);
+                        });
+                }
+                    break;
+                    
+                case "restart-application":
+                {
+                    Console.BackgroundColor = ConsoleColor.Blue;
+                    Console.ForegroundColor = ConsoleColor.White;
+                    APP.Send("Restarting the app..");
+
+                    Observable.Timer(TimeSpan.FromSeconds(2))
+                        .Take(1)
+                        .Subscribe(_=>TargetApp.CloseMainWindow(),
+                            () =>
+                            {
+                                Observable.Timer(TimeSpan.FromSeconds(2))
+                                    .Take(1)
+                                    .Subscribe(_=>TargetApp.Start());            
+                            });
+                }
+                    break;
+                    
+                case "reset-application":
+                {
+                    Console.BackgroundColor = ConsoleColor.Blue;
+                    Console.ForegroundColor = ConsoleColor.White;
+                    var str3 = "[TCPServer] Sending Message to all Clients: ResetApp";
+                    Console.WriteLine(str3);
+                    ORTCPMultiServer.Instance.SendAllClientsMessage(str3);
+                    APP.Send("Resetting the app..");
+                    APP.Send("Reset-App");                   
+                }
+                    break;
+            }
         }
+        
+        static private int GetPort()
+        {
+            StreamReader reader = new StreamReader("Port.txt");
+            var _port = 0; 
+            int.TryParse(reader.ReadLine(),out _port);
+            reader.Close();
+            return _port;
+        }
+
+        
     }
 }
 
-/*
-  if (message != "" && message != "esc" && message != "/cmprestart" && 
-                    message != "/cmpshutdown")
-                {
-                    Console.WriteLine("Sending Message to all Clients: " + message);
-                    ORTCPMultiServer.Instance.SendAllClientsMessage(message);
-                    message = null;
-                }
 
-                if (message == "/cmprestart")
-                {
-                    ProcessStartInfo proc = new ProcessStartInfo();
-                    proc.WindowStyle = ProcessWindowStyle.Hidden;
-                    proc.FileName = "cmd";
-                    proc.Arguments = "/C shutdown /r /f /t 0";
-                    Process.Start(proc);
-                }
-                else if (message == "/cmpshutdown")
-                {
-                    ProcessStartInfo proc = new ProcessStartInfo();
-                    proc.WindowStyle = ProcessWindowStyle.Hidden;
-                    proc.FileName = "cmd";
-                    proc.Arguments = "/C shutdown /s /f /t 0";
-                    Process.Start(proc);
-                }
-*/
+ 
