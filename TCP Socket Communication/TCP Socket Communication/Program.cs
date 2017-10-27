@@ -141,6 +141,15 @@ namespace TCP_Socket_Communication
                         .Subscribe(_ => TargetApp.CloseMainWindow());
                 }
                     break;
+
+				case "appstatus":
+				{
+						Console.BackgroundColor = ConsoleColor.Blue;
+						Console.ForegroundColor = ConsoleColor.White;
+						Console.WriteLine("[TCPServer] Sending Message to all Clients: appstatus");
+						ORTCPMultiServer.Instance.SendAllClientsMessage("appstatus");
+				}
+					break;
             }
         }
         
