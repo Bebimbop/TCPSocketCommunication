@@ -150,6 +150,14 @@ namespace TCP_Socket_Communication
 						ORTCPMultiServer.Instance.SendAllClientsMessage("appstatus");
 				}
 					break;
+
+                case "Sensor Unavailable":
+                {
+                    Console.BackgroundColor = ConsoleColor.Red;
+                    Console.ForegroundColor = ConsoleColor.White;
+                    SC.Send(e.message);
+                }
+                    break;
             }
         }
         
