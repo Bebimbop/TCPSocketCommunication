@@ -2,10 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Reactive.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Reflection;
+using Microsoft.Win32;
 
 namespace TCP_Socket_Communication
 {
@@ -18,10 +17,19 @@ namespace TCP_Socket_Communication
 
         private static Process TargetApp;
         private static int Port;
+        private static RegistryKey regKey;
+
+        //private static string applicationPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop) + "/NFLX_SuitUp/NFLX_SuitUp.exe";
+        private static string applicationPath = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory) +
+                                                "/ShowControlTest/ShowControlTest.exe";
         
         static void Main(string[] args)
         {
-            TargetApp = Process.Start(@"..\" + "NFLX_SuitUp.exe");
+            regKey = Registry.CurrentUser.OpenSubKey("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", true);
+            regKey.SetValue("ShowControl_TestControlApp", Assembly.GetExecutingAssembly().Location.ToString());
+            //regKey.SetValue("NFLX_ShowControl", Assembly.GetExecutingAssembly().Location.ToString());
+
+            TargetApp = Process.Start(applicationPath);
             Port = GetPort();
             
             Server = new ORTCPMultiServer();
@@ -126,7 +134,7 @@ namespace TCP_Socket_Communication
                     Console.BackgroundColor = ConsoleColor.Blue;
                     Console.ForegroundColor = ConsoleColor.White;
                     var str3 = "reset-application";
-                    Console.WriteLine("[TCPServer] Sending Message to all Clients: ResetApp");
+                    Console.WriteLine("[TCPServer] Sending Message to all Clients: " + str3);
                     ORTCPMultiServer.Instance.SendAllClientsMessage(str3);               
                 }
                     break;
@@ -142,28 +150,34 @@ namespace TCP_Socket_Communication
                 }
                     break;
 
-				case "appstatus":
+				case "status-application":
 				{
 						Console.BackgroundColor = ConsoleColor.Blue;
 						Console.ForegroundColor = ConsoleColor.White;
-						Console.WriteLine("[TCPServer] Sending Message to all Clients: appstatus");
-						ORTCPMultiServer.Instance.SendAllClientsMessage("appstatus");
+						Console.WriteLine("[TCPServer] Sending Message to App client: status-application");
+                        APP.Send(e.message);
+						//ORTCPMultiServer.Instance.SendAllClientsMessage("status-application");
 				}
-					break;
+                    break;
 
-                case "Sensor Unavailable":
+                default:
                 {
-                    Console.BackgroundColor = ConsoleColor.Red;
-                    Console.ForegroundColor = ConsoleColor.White;
-                    SC.Send(e.message);
+                    if(SC != null)
+                        SC.Send(e.message);
+                    else
+                    {
+                        Console.Write("Unknown command. Show Control is null.");
+                    }
+                    //ORTCPMultiServer.Instance.SendAllClientsMessage(e.message);
                 }
                     break;
             }
         }
         
-        static private int GetPort()
+        private static int GetPort()
         {
-            StreamReader reader = new StreamReader("Port.txt");
+            string path = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory) + "/ShowControl/Port.txt";
+            StreamReader reader = new StreamReader(path);
             var _port = 0; 
             int.TryParse(reader.ReadLine(),out _port);
             reader.Close();

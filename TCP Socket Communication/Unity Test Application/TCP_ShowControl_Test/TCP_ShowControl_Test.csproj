@@ -91,6 +91,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Assets\PersistentData.cs" />
     <Compile Include="Assets\Socket\ExampleControllerForClient.cs" />
     <Compile Include="Assets\Socket\ExampleControllerForServer.cs" />
     <Compile Include="Assets\Socket\ORTCPAbstractMultiServer.cs" />

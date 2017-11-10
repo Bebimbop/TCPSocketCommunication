@@ -1,9 +1,10 @@
-﻿using System;
+using System;
 using System.Net.Sockets;
 using System.Collections.Generic;
 using TCP_Socket_Communication;
 
-public class ORTCPAbstractMultiServer  {
+public class ORTCPAbstractMultiServer
+{
 	
 	protected class NewConnection 
 	{	
@@ -77,7 +78,7 @@ public class ORTCPAbstractMultiServer  {
 		return null;
 	}
 	
-	protected int GetClientID(ORTCPClient client) 
+	public int GetClientID(ORTCPClient client) 
 	{
 		foreach (KeyValuePair<int, ORTCPClient> entry in _clients)
 			if (entry.Value == client)
@@ -85,7 +86,7 @@ public class ORTCPAbstractMultiServer  {
 		return -1;
 	}
 	
-	protected int GetClientID(TcpClient tcpClient) 
+	public int GetClientID(TcpClient tcpClient) 
 	{
 		foreach (KeyValuePair<int, ORTCPClient> entry in _clients)
 			if (entry.Value.tcpClient == tcpClient)

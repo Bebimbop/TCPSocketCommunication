@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -20,6 +20,7 @@ public class ExampleControllerForClient : MonoBehaviour {
 	
 	private void Awake()
 	{
+	    Application.runInBackground = true;
 		var path = "";
 #if UNITY_EDITOR
 		path = Application.dataPath;
@@ -44,19 +45,21 @@ public class ExampleControllerForClient : MonoBehaviour {
 					.Subscribe(DoCommand);
 			})
 			.AddTo(this.gameObject);
-		
-		Observable.EveryUpdate().Subscribe(_ =>
-		{
-			switch (Client._state)
-			{
-				case ORTCPClientState.Connected:
-					StatusGraphic.color = Color.green;
-					break;
-				case ORTCPClientState.Disconnected:
-					StatusGraphic.color = Color.red;
-					break;
-			}
-		}).AddTo(gameObject);
+
+	    Observable.EveryUpdate().Subscribe(_ =>
+	    {
+	        switch (Client._state)
+	        {
+	            case ORTCPClientState.Connected:
+	                StatusGraphic.color = Color.green;
+	                break;
+	            case ORTCPClientState.Disconnected:
+	                StatusGraphic.color = Color.red;
+	                break;
+	        }
+	    }).AddTo(gameObject);
+
+	    PersistentData.appStatus = PersistentData.eAppStatus.Running;
 	}
 
 
@@ -84,9 +87,29 @@ public class ExampleControllerForClient : MonoBehaviour {
 	{
 		switch (msg)
 		{
-		   case  "Reset-App":
+		   case  "reset-application":
 			   SceneManager.LoadScene(SceneManager.GetActiveScene().name);
 			   break;
+
+		   case "status-application":
+		   {
+               Client.Send("Application Status: " + PersistentData.appStatus);
+
+		       int rand = UnityEngine.Random.Range(0, 10);
+		       if (rand <= 4)
+		       {
+		           PersistentData.sensorStatus = PersistentData.eSensorStatus.Available;
+		           Client.Send("Sensor Status: " + PersistentData.sensorStatus);
+		       }
+		       else
+		       {
+		           PersistentData.sensorStatus = PersistentData.eSensorStatus.Unavailable;
+                   Client.Send("Sensor Status: " + PersistentData.sensorStatus);
+		       }
+               
+
+		       break;
+		   }
 		}
 	}
 
