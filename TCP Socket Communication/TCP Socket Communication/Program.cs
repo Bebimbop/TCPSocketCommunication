@@ -19,19 +19,17 @@ namespace TCP_Socket_Communication
         private static int Port;
         private static RegistryKey regKey;
 
-        //private static string applicationPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop) + "/NFLX_SuitUp/NFLX_SuitUp.exe";
         private static string applicationPath = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory) +
-                                                "/ShowControlTest/ShowControlTest.exe";
+                                                "/TestApplication/TestApplicatin.exe";
         
         static void Main(string[] args)
         {
             regKey = Registry.CurrentUser.OpenSubKey("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", true);
-            regKey.SetValue("ShowControl_TestControlApp", Assembly.GetExecutingAssembly().Location.ToString());
-            //regKey.SetValue("NFLX_ShowControl", Assembly.GetExecutingAssembly().Location.ToString());
+            regKey.SetValue("TestApplication", Assembly.GetExecutingAssembly().Location.ToString());
 
-            TargetApp = Process.Start(applicationPath);
+            StartTargetApplication();
+
             Port = GetPort();
-            
             Server = new ORTCPMultiServer();
             Server.Start(Port);
             
@@ -58,7 +56,7 @@ namespace TCP_Socket_Communication
                     var str = "[TCPServer] Sending Message to all Clients: TargetApp Connected";
                     Console.WriteLine(str);
                     ORTCPMultiServer.Instance.SendAllClientsMessage(str);
-                    APP.Send("Ready to receive cmds");
+                    APP?.Send("Ready to receive cmds");
                     break;
                 
                 case "200":
@@ -68,7 +66,7 @@ namespace TCP_Socket_Communication
                     var str1 = "[TCPServer] Sending Message to all Clients: ShowControl Connected";
                     Console.WriteLine(str1);
                     ORTCPMultiServer.Instance.SendAllClientsMessage(str1);
-                    APP.Send("Show Control Connected");
+                    APP?.Send("Show Control Connected");
                     break;
                     
                 case "shutdown-machine":
@@ -77,7 +75,7 @@ namespace TCP_Socket_Communication
                     var str2 = "[TCPServer] Sending Message to all Clients: Shutting down in 3s";
                     Console.WriteLine(str2);
                     ORTCPMultiServer.Instance.SendAllClientsMessage(str2);
-                    APP.Send("Shutting down in 3s..");
+                    APP?.Send("Shutting down in 3s..");
                     Observable.Timer(TimeSpan.FromSeconds(3))
                         .Take(1)
                         .Subscribe(_ =>
@@ -97,7 +95,7 @@ namespace TCP_Socket_Communication
                     var str3 = "[TCPServer] Sending Message to all Clients: Restarting in 3s";
                     Console.WriteLine(str3);
                     ORTCPMultiServer.Instance.SendAllClientsMessage(str3);
-                    APP.Send("Shutting down in 3s...");
+                    APP?.Send("Shutting down in 3s...");
                     Observable.Timer(TimeSpan.FromSeconds(3))
                         .Take(1)
                         .Subscribe(_ =>
@@ -115,7 +113,7 @@ namespace TCP_Socket_Communication
                 {
                     Console.BackgroundColor = ConsoleColor.Blue;
                     Console.ForegroundColor = ConsoleColor.White;
-                    APP.Send("Restarting the app..");
+                    APP?.Send("Restarting the app..");
 
                     Observable.Timer(TimeSpan.FromSeconds(2))
                         .Take(1)
@@ -143,7 +141,7 @@ namespace TCP_Socket_Communication
                 {
                     Console.BackgroundColor = ConsoleColor.Blue;
                     Console.ForegroundColor = ConsoleColor.White;
-                    APP.Send("Shutting down the app...");
+                    APP?.Send("Shutting down the app...");
                     Observable.Timer(TimeSpan.FromSeconds(2))
                         .Take(1)
                         .Subscribe(_ => TargetApp.CloseMainWindow());
@@ -155,8 +153,7 @@ namespace TCP_Socket_Communication
 						Console.BackgroundColor = ConsoleColor.Blue;
 						Console.ForegroundColor = ConsoleColor.White;
 						Console.WriteLine("[TCPServer] Sending Message to App client: status-application");
-                        APP.Send(e.message);
-						//ORTCPMultiServer.Instance.SendAllClientsMessage("status-application");
+				        APP?.Send(e.message);
 				}
                     break;
 
@@ -168,7 +165,6 @@ namespace TCP_Socket_Communication
                     {
                         Console.Write("Unknown command. Show Control is null.");
                     }
-                    //ORTCPMultiServer.Instance.SendAllClientsMessage(e.message);
                 }
                     break;
             }
@@ -184,6 +180,10 @@ namespace TCP_Socket_Communication
             return _port;
         }
 
+        private static void StartTargetApplication()
+        {
+            TargetApp = Process.Start(applicationPath);
+        }
         
     }
 }
